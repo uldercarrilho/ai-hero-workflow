@@ -1,6 +1,8 @@
-# UI Prototype
+# UI Prototype (in-repo)
 
 Generate **several radically different UI variations** on a single route, switchable from a floating bottom bar. The user flips between variants in the browser, picks one (or steals bits from each), then throws the rest away.
+
+**In Cursor, prefer [UI-CANVAS.md](UI-CANVAS.md)** unless the prototype must run inside the real app (existing header/sidebar, auth, live data, project component library). Canvas is faster, leaves no throwaway files in the repo, and opens beside the chat.
 
 If the question is about logic/state rather than what something looks like — wrong branch. Use [LOGIC.md](LOGIC.md).
 
