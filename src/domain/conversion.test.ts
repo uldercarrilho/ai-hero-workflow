@@ -20,6 +20,14 @@ const LENGTH_UNITS = [
   "mile",
 ];
 
+const MASS_UNITS = [
+  "milligram",
+  "gram",
+  "kilogram",
+  "ounce",
+  "pound",
+];
+
 describe("default conversion", () => {
   it("returns length quantity with kilometers and miles when state is empty", () => {
     const conversion = getDefaultConversion();
@@ -40,6 +48,15 @@ describe("catalog", () => {
     expect(length).toBeDefined();
     const unitNames = length!.units.map((u) => u.name);
     expect(unitNames).toEqual(LENGTH_UNITS);
+  });
+
+  it("exposes mass with all 5 expected units", () => {
+    const catalog = getCatalog();
+    const mass = catalog.find((q) => q.name === "mass");
+
+    expect(mass).toBeDefined();
+    const unitNames = mass!.units.map((u) => u.name);
+    expect(unitNames).toEqual(MASS_UNITS);
   });
 
   it("each unit has a name and symbol", () => {
@@ -160,14 +177,52 @@ describe("convertValueInQuantity", () => {
     expect(result.error).toBeNull();
   });
 
+  it("converts kilogram to pound", () => {
+    const result = convertValueInQuantity("1.000000", "kilogram", "pound", "mass");
+    expect(result.computedValue).toBe("2.204623");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts pound to kilogram", () => {
+    const result = convertValueInQuantity("1.000000", "pound", "kilogram", "mass");
+    expect(result.computedValue).toBe("0.453592");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts gram to ounce", () => {
+    const result = convertValueInQuantity("100.0000", "gram", "ounce", "mass");
+    expect(result.computedValue).toBe("3.5274");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts ounce to gram", () => {
+    const result = convertValueInQuantity("1.000", "ounce", "gram", "mass");
+    expect(result.computedValue).toBe("28.350");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts milligram to gram", () => {
+    const result = convertValueInQuantity("1000.0", "milligram", "gram", "mass");
+    expect(result.computedValue).toBe("1.0");
+    expect(result.error).toBeNull();
+  });
+
   it("throws error for unknown quantity", () => {
-    expect(() => convertValueInQuantity("1", "kilogram", "pound", "mass")).toThrow(
-      "Unknown quantity: mass",
+    expect(() => convertValueInQuantity("1", "unknown", "unknown", "bogus")).toThrow(
+      "Unknown quantity: bogus",
     );
   });
 });
 
 describe("getQuantityDefault", () => {
+  it("returns mass default pair (kg, lb)", () => {
+    const defaultPair = getQuantityDefault("mass");
+    expect(defaultPair).toEqual([
+      { name: "kilogram", symbol: "kg" },
+      { name: "pound", symbol: "lb" },
+    ]);
+  });
+
   it("returns length default pair (km, mi)", () => {
     const defaultPair = getQuantityDefault("length");
     expect(defaultPair).toEqual([

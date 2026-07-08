@@ -45,6 +45,22 @@ const LENGTH_UNITS: Unit[] = [
   { name: "mile", symbol: "mi" },
 ];
 
+const MASS_CONVERSIONS: QuantityConversions = {
+  milligram: 0.000001,
+  gram: 0.001,
+  kilogram: 1,
+  ounce: 0.028349523125,
+  pound: 0.45359237,
+};
+
+const MASS_UNITS: Unit[] = [
+  { name: "milligram", symbol: "mg" },
+  { name: "gram", symbol: "g" },
+  { name: "kilogram", symbol: "kg" },
+  { name: "ounce", symbol: "oz" },
+  { name: "pound", symbol: "lb" },
+];
+
 const catalog: Quantity[] = [
   {
     name: "length",
@@ -52,6 +68,14 @@ const catalog: Quantity[] = [
     defaultPair: [
       { name: "kilometer", symbol: "km" },
       { name: "mile", symbol: "mi" },
+    ],
+  },
+  {
+    name: "mass",
+    units: MASS_UNITS,
+    defaultPair: [
+      { name: "kilogram", symbol: "kg" },
+      { name: "pound", symbol: "lb" },
     ],
   },
 ];
@@ -97,6 +121,7 @@ export function getDisplayPrecision(value: string): number {
 
 function getConversions(quantityName: string): QuantityConversions {
   if (quantityName === "length") return LENGTH_CONVERSIONS;
+  if (quantityName === "mass") return MASS_CONVERSIONS;
   throw new Error(`Unknown quantity: ${quantityName}`);
 }
 
