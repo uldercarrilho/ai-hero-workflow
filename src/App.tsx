@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   getDefaultConversion,
   getCatalog,
@@ -7,6 +7,7 @@ import {
   convertValueInQuantity,
   swapConversion,
 } from "./domain/conversion";
+import { serializeConversion, deserializeConversion } from "./domain/url-state";
 import type { PairedConversion } from "./domain/conversion";
 import "./App.css";
 
@@ -17,6 +18,39 @@ function App() {
   const [leftError, setLeftError] = useState<string | null>(null);
   const [rightError, setRightError] = useState<string | null>(null);
   const [drivingSide, setDrivingSide] = useState<"left" | "right">("left");
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    const search = window.location.search;
+    if (search) {
+      const result = deserializeConversion(search);
+      if (result) {
+        const { conversion: c, drivingSide: d, drivingValue: v } = result;
+        setConversion(c);
+        setDrivingSide(d);
+        if (v !== "") {
+          const fromUnit = d === "left" ? c.left.unit : c.right.unit;
+          const toUnit = d === "left" ? c.right.unit : c.left.unit;
+          const computed = convertValueInQuantity(v, fromUnit, toUnit, c.quantity);
+          if (d === "left") {
+            setLeftValue(v);
+            if (!computed.error) setRightValue(computed.computedValue);
+          } else {
+            setRightValue(v);
+            if (!computed.error) setLeftValue(computed.computedValue);
+          }
+        }
+      }
+    }
+    setInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+    const drivingValue = drivingSide === "left" ? leftValue : rightValue;
+    const search = serializeConversion(conversion, drivingSide, drivingValue);
+    window.history.replaceState(null, "", search);
+  }, [conversion, drivingSide, leftValue, rightValue, initialized]);
 
   const catalog = getCatalog();
   const currentUnits = getUnitsForQuantity(conversion.quantity);
