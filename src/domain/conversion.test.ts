@@ -38,6 +38,12 @@ const VOLUME_UNITS = [
   "US gallon",
 ];
 
+const TEMPERATURE_UNITS = [
+  "Celsius",
+  "Fahrenheit",
+  "Kelvin",
+];
+
 describe("default conversion", () => {
   it("returns length quantity with kilometers and miles when state is empty", () => {
     const conversion = getDefaultConversion();
@@ -76,6 +82,15 @@ describe("catalog", () => {
     expect(volume).toBeDefined();
     const unitNames = volume!.units.map((u) => u.name);
     expect(unitNames).toEqual(VOLUME_UNITS);
+  });
+
+  it("exposes temperature with all 3 expected units", () => {
+    const catalog = getCatalog();
+    const temp = catalog.find((q) => q.name === "temperature");
+
+    expect(temp).toBeDefined();
+    const unitNames = temp!.units.map((u) => u.name);
+    expect(unitNames).toEqual(TEMPERATURE_UNITS);
   });
 
   it("each unit has a name and symbol", () => {
@@ -233,6 +248,49 @@ describe("convertValueInQuantity", () => {
   });
 });
 
+describe("convertValueInQuantity temperature conversions", () => {
+  it.each([
+    ["0°C to 32°F (freezing)",          "0.000000", "Celsius",    "Fahrenheit", "32.000000"],
+    ["32°F to 0°C (freezing)",          "32.000000", "Fahrenheit", "Celsius",    "0.000000"],
+    ["100°C to 212°F (boiling)",        "100.000000", "Celsius",    "Fahrenheit", "212.000000"],
+    ["212°F to 100°C (boiling)",        "212.000000", "Fahrenheit", "Celsius",    "100.000000"],
+    ["0°C to 273.15 K",                 "0.000000", "Celsius",    "Kelvin",     "273.150000"],
+    ["273.15 K to 0°C",                 "273.150000", "Kelvin",     "Celsius",    "0.000000"],
+    ["0 K to -459.67°F (absolute zero)","0.000000", "Kelvin",     "Fahrenheit", "-459.670000"],
+    ["32°F to 273.15 K",                "32.000000", "Fahrenheit", "Kelvin",     "273.150000"],
+    ["100°C to 373.15 K",              "100.000000", "Celsius",    "Kelvin",     "373.150000"],
+    ["0 K to -273.15°C",               "0.000000", "Kelvin",     "Celsius",    "-273.150000"],
+  ])("converts %s", (_desc, value, from, to, expected) => {
+    const result = convertValueInQuantity(value, from, to, "temperature");
+    expect(result.computedValue).toBe(expected);
+    expect(result.error).toBeNull();
+  });
+
+  it("preserves precision from driving value", () => {
+    const result = convertValueInQuantity("0.0", "Celsius", "Fahrenheit", "temperature");
+    expect(result.computedValue).toBe("32.0");
+    expect(result.error).toBeNull();
+  });
+
+  it("returns identity for same unit", () => {
+    const result = convertValueInQuantity("25.0", "Celsius", "Celsius", "temperature");
+    expect(result.computedValue).toBe("25.0");
+    expect(result.error).toBeNull();
+  });
+
+  it("returns empty for empty input", () => {
+    const result = convertValueInQuantity("", "Celsius", "Fahrenheit", "temperature");
+    expect(result.computedValue).toBe("");
+    expect(result.error).toBeNull();
+  });
+
+  it("returns error for invalid input", () => {
+    const result = convertValueInQuantity("abc", "Celsius", "Fahrenheit", "temperature");
+    expect(result.error).toBe("Invalid value");
+    expect(result.computedValue).toBe("");
+  });
+});
+
 describe("convertValueInQuantity volume conversions", () => {
   it("converts liter to US gallon (default pair)", () => {
     const result = convertValueInQuantity("1.000000", "liter", "US gallon", "volume");
@@ -305,6 +363,14 @@ describe("getQuantityDefault", () => {
     expect(defaultPair).toEqual([
       { name: "liter", symbol: "L" },
       { name: "US gallon", symbol: "gal" },
+    ]);
+  });
+
+  it("returns temperature default pair (Celsius, Fahrenheit)", () => {
+    const defaultPair = getQuantityDefault("temperature");
+    expect(defaultPair).toEqual([
+      { name: "Celsius", symbol: "°C" },
+      { name: "Fahrenheit", symbol: "°F" },
     ]);
   });
 

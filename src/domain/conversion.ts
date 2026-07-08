@@ -23,6 +23,29 @@ export interface PairedConversion {
 
 type QuantityConversions = Record<string, number>;
 
+type TemperatureConverter = {
+  toCelsius: (v: number) => number;
+  fromCelsius: (v: number) => number;
+};
+
+const TEMPERATURE_CONVERTERS: Record<string, TemperatureConverter> = {
+  Celsius: { toCelsius: (v) => v, fromCelsius: (v) => v },
+  Fahrenheit: {
+    toCelsius: (v) => (v - 32) * (5 / 9),
+    fromCelsius: (v) => v * (9 / 5) + 32,
+  },
+  Kelvin: {
+    toCelsius: (v) => v - 273.15,
+    fromCelsius: (v) => v + 273.15,
+  },
+};
+
+const TEMPERATURE_UNITS: Unit[] = [
+  { name: "Celsius", symbol: "°C" },
+  { name: "Fahrenheit", symbol: "°F" },
+  { name: "Kelvin", symbol: "K" },
+];
+
 const LENGTH_CONVERSIONS: QuantityConversions = {
   millimeter: 0.001,
   centimeter: 0.01,
@@ -106,6 +129,14 @@ const catalog: Quantity[] = [
       { name: "US gallon", symbol: "gal" },
     ],
   },
+  {
+    name: "temperature",
+    units: TEMPERATURE_UNITS,
+    defaultPair: [
+      { name: "Celsius", symbol: "°C" },
+      { name: "Fahrenheit", symbol: "°F" },
+    ],
+  },
 ];
 
 export function getCatalog(): Quantity[] {
@@ -168,6 +199,17 @@ export function convertValueInQuantity(
   const num = Number(trimmed);
   if (!isFinite(num)) {
     return { computedValue: "", error: "Invalid value" };
+  }
+
+  if (quantityName === "temperature") {
+    const fromConv = TEMPERATURE_CONVERTERS[fromUnit];
+    const toConv = TEMPERATURE_CONVERTERS[toUnit];
+    if (!fromConv) throw new Error(`Unknown unit: ${fromUnit}`);
+    if (!toConv) throw new Error(`Unknown unit: ${toUnit}`);
+    const precision = getDisplayPrecision(value);
+    const inCelsius = fromConv.toCelsius(num);
+    const result = toConv.fromCelsius(inCelsius);
+    return { computedValue: formatValue(result, precision), error: null };
   }
 
   const conversions = getConversions(quantityName);
