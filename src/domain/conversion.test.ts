@@ -28,6 +28,16 @@ const MASS_UNITS = [
   "pound",
 ];
 
+const VOLUME_UNITS = [
+  "milliliter",
+  "liter",
+  "US fluid ounce",
+  "US cup",
+  "US pint",
+  "US quart",
+  "US gallon",
+];
+
 describe("default conversion", () => {
   it("returns length quantity with kilometers and miles when state is empty", () => {
     const conversion = getDefaultConversion();
@@ -57,6 +67,15 @@ describe("catalog", () => {
     expect(mass).toBeDefined();
     const unitNames = mass!.units.map((u) => u.name);
     expect(unitNames).toEqual(MASS_UNITS);
+  });
+
+  it("exposes volume with all 7 expected US customary units", () => {
+    const catalog = getCatalog();
+    const volume = catalog.find((q) => q.name === "volume");
+
+    expect(volume).toBeDefined();
+    const unitNames = volume!.units.map((u) => u.name);
+    expect(unitNames).toEqual(VOLUME_UNITS);
   });
 
   it("each unit has a name and symbol", () => {
@@ -214,6 +233,56 @@ describe("convertValueInQuantity", () => {
   });
 });
 
+describe("convertValueInQuantity volume conversions", () => {
+  it("converts liter to US gallon (default pair)", () => {
+    const result = convertValueInQuantity("1.000000", "liter", "US gallon", "volume");
+    expect(result.computedValue).toBe("0.264172");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts US gallon to liter (default pair)", () => {
+    const result = convertValueInQuantity("1.000000", "US gallon", "liter", "volume");
+    expect(result.computedValue).toBe("3.785412");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts milliliter to US fluid ounce", () => {
+    const result = convertValueInQuantity("100.000", "milliliter", "US fluid ounce", "volume");
+    expect(result.computedValue).toBe("3.381");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts US quart to US cup", () => {
+    const result = convertValueInQuantity("1.00", "US quart", "US cup", "volume");
+    expect(result.computedValue).toBe("4.00");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts US pint to milliliter", () => {
+    const result = convertValueInQuantity("1.000", "US pint", "milliliter", "volume");
+    expect(result.computedValue).toBe("473.176");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts US gallon to US quart", () => {
+    const result = convertValueInQuantity("1.00", "US gallon", "US quart", "volume");
+    expect(result.computedValue).toBe("4.00");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts extreme pair: milliliter to US gallon (very small to very large)", () => {
+    const result = convertValueInQuantity("1.000000", "milliliter", "US gallon", "volume");
+    expect(result.computedValue).toBe("0.000264");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts extreme pair: US gallon to milliliter (very large to very small)", () => {
+    const result = convertValueInQuantity("1.000000", "US gallon", "milliliter", "volume");
+    expect(result.computedValue).toBe("3785.411784");
+    expect(result.error).toBeNull();
+  });
+});
+
 describe("getQuantityDefault", () => {
   it("returns mass default pair (kg, lb)", () => {
     const defaultPair = getQuantityDefault("mass");
@@ -228,6 +297,14 @@ describe("getQuantityDefault", () => {
     expect(defaultPair).toEqual([
       { name: "kilometer", symbol: "km" },
       { name: "mile", symbol: "mi" },
+    ]);
+  });
+
+  it("returns volume default pair (liter, US gallon)", () => {
+    const defaultPair = getQuantityDefault("volume");
+    expect(defaultPair).toEqual([
+      { name: "liter", symbol: "L" },
+      { name: "US gallon", symbol: "gal" },
     ]);
   });
 

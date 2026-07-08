@@ -61,6 +61,26 @@ const MASS_UNITS: Unit[] = [
   { name: "pound", symbol: "lb" },
 ];
 
+const VOLUME_CONVERSIONS: QuantityConversions = {
+  milliliter: 0.001,
+  liter: 1,
+  "US fluid ounce": 0.0295735295625,
+  "US cup": 0.2365882365,
+  "US pint": 0.473176473,
+  "US quart": 0.946352946,
+  "US gallon": 3.785411784,
+};
+
+const VOLUME_UNITS: Unit[] = [
+  { name: "milliliter", symbol: "mL" },
+  { name: "liter", symbol: "L" },
+  { name: "US fluid ounce", symbol: "fl oz" },
+  { name: "US cup", symbol: "cup" },
+  { name: "US pint", symbol: "pt" },
+  { name: "US quart", symbol: "qt" },
+  { name: "US gallon", symbol: "gal" },
+];
+
 const catalog: Quantity[] = [
   {
     name: "length",
@@ -76,6 +96,14 @@ const catalog: Quantity[] = [
     defaultPair: [
       { name: "kilogram", symbol: "kg" },
       { name: "pound", symbol: "lb" },
+    ],
+  },
+  {
+    name: "volume",
+    units: VOLUME_UNITS,
+    defaultPair: [
+      { name: "liter", symbol: "L" },
+      { name: "US gallon", symbol: "gal" },
     ],
   },
 ];
@@ -122,6 +150,7 @@ export function getDisplayPrecision(value: string): number {
 function getConversions(quantityName: string): QuantityConversions {
   if (quantityName === "length") return LENGTH_CONVERSIONS;
   if (quantityName === "mass") return MASS_CONVERSIONS;
+  if (quantityName === "volume") return VOLUME_CONVERSIONS;
   throw new Error(`Unknown quantity: ${quantityName}`);
 }
 
