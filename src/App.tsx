@@ -1,48 +1,177 @@
-import { useState } from "react";
-import { getDefaultConversion, convertValue } from "./domain/conversion";
+import { useState, useCallback } from "react";
+import {
+  getDefaultConversion,
+  getCatalog,
+  getUnitsForQuantity,
+  getQuantityDefault,
+  convertValueInQuantity,
+  swapConversion,
+} from "./domain/conversion";
+import type { PairedConversion } from "./domain/conversion";
 import "./App.css";
 
 function App() {
-  const conversion = getDefaultConversion();
+  const [conversion, setConversion] = useState<PairedConversion>(getDefaultConversion);
   const [leftValue, setLeftValue] = useState("");
   const [rightValue, setRightValue] = useState("");
   const [leftError, setLeftError] = useState<string | null>(null);
   const [rightError, setRightError] = useState<string | null>(null);
+  const [drivingSide, setDrivingSide] = useState<"left" | "right">("left");
 
-  const handleLeftChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLeftValue(newValue);
+  const catalog = getCatalog();
+  const currentUnits = getUnitsForQuantity(conversion.quantity);
 
-    const result = convertValue(newValue, "kilometer", "mile");
-    if (result.error) {
-      setLeftError(result.error);
-    } else {
+  const handleLeftChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setLeftValue(newValue);
+      setDrivingSide("left");
+
+      const result = convertValueInQuantity(newValue, conversion.left.unit, conversion.right.unit, conversion.quantity);
+      if (result.error) {
+        setLeftError(result.error);
+      } else {
+        setLeftError(null);
+        setRightError(null);
+        setRightValue(result.computedValue);
+      }
+    },
+    [conversion.left.unit, conversion.right.unit, conversion.quantity],
+  );
+
+  const handleRightChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setRightValue(newValue);
+      setDrivingSide("right");
+
+      const result = convertValueInQuantity(newValue, conversion.right.unit, conversion.left.unit, conversion.quantity);
+      if (result.error) {
+        setRightError(result.error);
+      } else {
+        setRightError(null);
+        setLeftError(null);
+        setLeftValue(result.computedValue);
+      }
+    },
+    [conversion.right.unit, conversion.left.unit, conversion.quantity],
+  );
+
+  const handleLeftUnitChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newUnitName = e.target.value;
+      const newUnit = currentUnits.find((u) => u.name === newUnitName)!;
+      setConversion((prev) => ({
+        ...prev,
+        left: { ...prev.left, unit: newUnitName, symbol: newUnit.symbol },
+      }));
+      if (drivingSide === "left" && leftValue !== "") {
+        const result = convertValueInQuantity(leftValue, newUnitName, conversion.right.unit, conversion.quantity);
+        if (result.error) {
+          setLeftError(result.error);
+        } else {
+          setLeftError(null);
+          setRightError(null);
+          setRightValue(result.computedValue);
+        }
+      } else if (drivingSide === "right" && rightValue !== "") {
+        const result = convertValueInQuantity(rightValue, conversion.right.unit, newUnitName, conversion.quantity);
+        if (result.error) {
+          setRightError(result.error);
+        } else {
+          setRightError(null);
+          setLeftError(null);
+          setLeftValue(result.computedValue);
+        }
+      }
+    },
+    [currentUnits, conversion.right.unit, conversion.quantity, drivingSide, leftValue, rightValue],
+  );
+
+  const handleRightUnitChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newUnitName = e.target.value;
+      const newUnit = currentUnits.find((u) => u.name === newUnitName)!;
+      setConversion((prev) => ({
+        ...prev,
+        right: { ...prev.right, unit: newUnitName, symbol: newUnit.symbol },
+      }));
+      if (drivingSide === "left" && leftValue !== "") {
+        const result = convertValueInQuantity(leftValue, conversion.left.unit, newUnitName, conversion.quantity);
+        if (result.error) {
+          setLeftError(result.error);
+        } else {
+          setLeftError(null);
+          setRightError(null);
+          setRightValue(result.computedValue);
+        }
+      } else if (drivingSide === "right" && rightValue !== "") {
+        const result = convertValueInQuantity(rightValue, newUnitName, conversion.left.unit, conversion.quantity);
+        if (result.error) {
+          setRightError(result.error);
+        } else {
+          setRightError(null);
+          setLeftError(null);
+          setLeftValue(result.computedValue);
+        }
+      }
+    },
+    [currentUnits, conversion.left.unit, conversion.quantity, drivingSide, leftValue, rightValue],
+  );
+
+  const handleSwap = useCallback(() => {
+    const swapped = swapConversion(conversion);
+    setConversion(swapped);
+    setLeftValue(rightValue);
+    setRightValue(leftValue);
+    setLeftError(rightError);
+    setRightError(leftError);
+  }, [conversion, leftValue, rightValue, leftError, rightError]);
+
+  const handleQuantityChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newQuantityName = e.target.value;
+      const defaultPair = getQuantityDefault(newQuantityName);
+      setConversion({
+        quantity: newQuantityName,
+        left: { unit: defaultPair[0].name, symbol: defaultPair[0].symbol, value: "" },
+        right: { unit: defaultPair[1].name, symbol: defaultPair[1].symbol, value: "" },
+      });
+      setLeftValue("");
+      setRightValue("");
       setLeftError(null);
       setRightError(null);
-      setRightValue(result.computedValue);
-    }
-  };
-
-  const handleRightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setRightValue(newValue);
-
-    const result = convertValue(newValue, "mile", "kilometer");
-    if (result.error) {
-      setRightError(result.error);
-    } else {
-      setRightError(null);
-      setLeftError(null);
-      setLeftValue(result.computedValue);
-    }
-  };
+      setDrivingSide("left");
+    },
+    [],
+  );
 
   return (
     <div className="converter">
+      <div className="quantity-selector">
+        <label htmlFor="quantity-select">Quantity</label>
+        <select
+          id="quantity-select"
+          value={conversion.quantity}
+          onChange={handleQuantityChange}
+        >
+          {catalog.map((q) => (
+            <option key={q.name} value={q.name}>
+              {q.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <h1>{conversion.quantity} conversion</h1>
       <div className="paired-conversion">
         <div className="side">
-          <label>{conversion.left.symbol}</label>
+          <select value={conversion.left.unit} onChange={handleLeftUnitChange}>
+            {currentUnits.map((u) => (
+              <option key={u.name} value={u.name}>
+                {u.symbol}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             value={leftValue}
@@ -50,8 +179,17 @@ function App() {
           />
           {leftError && <span className="error">{leftError}</span>}
         </div>
+        <button className="swap-button" onClick={handleSwap} aria-label="Swap units and values">
+          &#8646;
+        </button>
         <div className="side">
-          <label>{conversion.right.symbol}</label>
+          <select value={conversion.right.unit} onChange={handleRightUnitChange}>
+            {currentUnits.map((u) => (
+              <option key={u.name} value={u.name}>
+                {u.symbol}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             value={rightValue}

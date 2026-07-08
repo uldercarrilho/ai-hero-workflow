@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { getDefaultConversion, getCatalog, convertValue, getDisplayPrecision } from "./conversion";
+import {
+  getDefaultConversion,
+  getCatalog,
+  convertValue,
+  getDisplayPrecision,
+  swapConversion,
+  convertValueInQuantity,
+  getQuantityDefault,
+} from "./conversion";
+
+const LENGTH_UNITS = [
+  "millimeter",
+  "centimeter",
+  "meter",
+  "kilometer",
+  "inch",
+  "foot",
+  "yard",
+  "mile",
+];
 
 describe("default conversion", () => {
   it("returns length quantity with kilometers and miles when state is empty", () => {
@@ -14,17 +33,23 @@ describe("default conversion", () => {
 });
 
 describe("catalog", () => {
-  it("exposes length with kilometer and mile", () => {
+  it("exposes length with all 8 expected units", () => {
     const catalog = getCatalog();
     const length = catalog.find((q) => q.name === "length");
 
     expect(length).toBeDefined();
-    expect(length!.units).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "kilometer", symbol: "km" }),
-        expect.objectContaining({ name: "mile", symbol: "mi" }),
-      ]),
-    );
+    const unitNames = length!.units.map((u) => u.name);
+    expect(unitNames).toEqual(LENGTH_UNITS);
+  });
+
+  it("each unit has a name and symbol", () => {
+    const catalog = getCatalog();
+    for (const q of catalog) {
+      for (const u of q.units) {
+        expect(u.name).toBeTruthy();
+        expect(u.symbol).toBeTruthy();
+      }
+    }
   });
 });
 
@@ -46,7 +71,117 @@ describe("getDisplayPrecision", () => {
   });
 });
 
-describe("convertValue", () => {
+describe("swapConversion", () => {
+  it("swaps all fields between left and right sides", () => {
+    const input = {
+      quantity: "length",
+      left: { unit: "kilometer", symbol: "km", value: "10" },
+      right: { unit: "mile", symbol: "mi", value: "6.21371" },
+    };
+
+    const result = swapConversion(input);
+
+    expect(result.left).toEqual({ unit: "mile", symbol: "mi", value: "6.21371" });
+    expect(result.right).toEqual({ unit: "kilometer", symbol: "km", value: "10" });
+  });
+
+  it("preserves quantity field unchanged", () => {
+    const input = {
+      quantity: "length",
+      left: { unit: "meter", symbol: "m", value: "" },
+      right: { unit: "foot", symbol: "ft", value: "" },
+    };
+
+    const result = swapConversion(input);
+
+    expect(result.quantity).toBe("length");
+  });
+
+  it("handles empty values correctly", () => {
+    const input = {
+      quantity: "length",
+      left: { unit: "millimeter", symbol: "mm", value: "" },
+      right: { unit: "inch", symbol: "in", value: "" },
+    };
+
+    const result = swapConversion(input);
+
+    expect(result.left).toEqual({ unit: "inch", symbol: "in", value: "" });
+    expect(result.right).toEqual({ unit: "millimeter", symbol: "mm", value: "" });
+  });
+});
+
+describe("convertValueInQuantity", () => {
+  it("converts kilometer to mile using base-unit conversion", () => {
+    const result = convertValueInQuantity("1.000000", "kilometer", "mile", "length");
+    expect(result.computedValue).toBe("0.621371");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts mile to kilometer", () => {
+    const result = convertValueInQuantity("1.000000", "mile", "kilometer", "length");
+    expect(result.computedValue).toBe("1.609344");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts meter to foot", () => {
+    const result = convertValueInQuantity("1.0", "meter", "foot", "length");
+    expect(result.computedValue).toBe("3.3");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts inch to millimeter", () => {
+    const result = convertValueInQuantity("1.0", "inch", "millimeter", "length");
+    expect(result.computedValue).toBe("25.4");
+    expect(result.error).toBeNull();
+  });
+
+  it("converts yard to meter", () => {
+    const result = convertValueInQuantity("1.00", "yard", "meter", "length");
+    expect(result.computedValue).toBe("0.91");
+    expect(result.error).toBeNull();
+  });
+
+  it("returns empty for empty input", () => {
+    const result = convertValueInQuantity("", "kilometer", "mile", "length");
+    expect(result.computedValue).toBe("");
+    expect(result.error).toBeNull();
+  });
+
+  it("returns error for invalid input", () => {
+    const result = convertValueInQuantity("abc", "kilometer", "mile", "length");
+    expect(result.error).toBe("Invalid value");
+    expect(result.computedValue).toBe("");
+  });
+
+  it("returns identity for same unit", () => {
+    const result = convertValueInQuantity("5.5", "kilometer", "kilometer", "length");
+    expect(result.computedValue).toBe("5.5");
+    expect(result.error).toBeNull();
+  });
+
+  it("throws error for unknown quantity", () => {
+    expect(() => convertValueInQuantity("1", "kilogram", "pound", "mass")).toThrow(
+      "Unknown quantity: mass",
+    );
+  });
+});
+
+describe("getQuantityDefault", () => {
+  it("returns length default pair (km, mi)", () => {
+    const defaultPair = getQuantityDefault("length");
+    expect(defaultPair).toEqual([
+      { name: "kilometer", symbol: "km" },
+      { name: "mile", symbol: "mi" },
+    ]);
+  });
+
+  it("throws error for unknown quantity", () => {
+    expect(() => getQuantityDefault("unknown")).toThrow("Unknown quantity: unknown");
+  });
+});
+
+describe("convertValue (legacy)", () => {
   it("converts kilometer to mile", () => {
     const result = convertValue("1", "kilometer", "mile");
     expect(result.computedValue).toBe("1");

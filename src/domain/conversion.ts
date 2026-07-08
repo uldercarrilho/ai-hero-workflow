@@ -21,13 +21,34 @@ export interface PairedConversion {
   right: PairedConversionSide;
 }
 
+type QuantityConversions = Record<string, number>;
+
+const LENGTH_CONVERSIONS: QuantityConversions = {
+  millimeter: 0.001,
+  centimeter: 0.01,
+  meter: 1,
+  kilometer: 1000,
+  inch: 0.0254,
+  foot: 0.3048,
+  yard: 0.9144,
+  mile: 1609.344,
+};
+
+const LENGTH_UNITS: Unit[] = [
+  { name: "millimeter", symbol: "mm" },
+  { name: "centimeter", symbol: "cm" },
+  { name: "meter", symbol: "m" },
+  { name: "kilometer", symbol: "km" },
+  { name: "inch", symbol: "in" },
+  { name: "foot", symbol: "ft" },
+  { name: "yard", symbol: "yd" },
+  { name: "mile", symbol: "mi" },
+];
+
 const catalog: Quantity[] = [
   {
     name: "length",
-    units: [
-      { name: "kilometer", symbol: "km" },
-      { name: "mile", symbol: "mi" },
-    ],
+    units: LENGTH_UNITS,
     defaultPair: [
       { name: "kilometer", symbol: "km" },
       { name: "mile", symbol: "mi" },
@@ -48,10 +69,63 @@ export function getDefaultConversion(): PairedConversion {
   };
 }
 
+export function getQuantityDefault(quantityName: string): [Unit, Unit] {
+  const quantity = catalog.find((q) => q.name === quantityName);
+  if (!quantity) throw new Error(`Unknown quantity: ${quantityName}`);
+  return quantity.defaultPair;
+}
+
+export function getUnitsForQuantity(quantityName: string): Unit[] {
+  const quantity = catalog.find((q) => q.name === quantityName);
+  if (!quantity) throw new Error(`Unknown quantity: ${quantityName}`);
+  return quantity.units;
+}
+
+export function swapConversion(pc: PairedConversion): PairedConversion {
+  return {
+    quantity: pc.quantity,
+    left: pc.right,
+    right: pc.left,
+  };
+}
+
 export function getDisplayPrecision(value: string): number {
   const dotIndex = value.indexOf(".");
   if (dotIndex === -1) return 0;
   return value.length - dotIndex - 1;
+}
+
+function getConversions(quantityName: string): QuantityConversions {
+  if (quantityName === "length") return LENGTH_CONVERSIONS;
+  throw new Error(`Unknown quantity: ${quantityName}`);
+}
+
+export function convertValueInQuantity(
+  value: string,
+  fromUnit: string,
+  toUnit: string,
+  quantityName: string,
+): { computedValue: string; error: string | null } {
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return { computedValue: "", error: null };
+  }
+
+  const num = Number(trimmed);
+  if (!isFinite(num)) {
+    return { computedValue: "", error: "Invalid value" };
+  }
+
+  const conversions = getConversions(quantityName);
+  const fromFactor = conversions[fromUnit];
+  const toFactor = conversions[toUnit];
+  if (fromFactor === undefined) throw new Error(`Unknown unit: ${fromUnit}`);
+  if (toFactor === undefined) throw new Error(`Unknown unit: ${toUnit}`);
+
+  const factor = fromFactor / toFactor;
+  const precision = getDisplayPrecision(value);
+  const result = num * factor;
+  return { computedValue: formatValue(result, precision), error: null };
 }
 
 const KM_TO_MI = 0.621371;
